@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cotizador</title>
+<style>
+:root{--c:#00b0f0;--d:#14325c;--t:#1c2530;--l:#d5dde6;--bg:#f3f6f9}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--t);background:var(--bg)}
+nav{position:sticky;top:0;z-index:5;display:flex;background:var(--d)}
+nav button{flex:1;padding:14px 4px;border:0;background:none;color:#cfe3f5;font:inherit;font-weight:600}
+nav button.on{color:#fff;box-shadow:inset 0 -3px var(--c)}
+main{max-width:860px;margin:0 auto;padding:14px}
+.v{display:none}.v.on{display:block}
+label{display:block;font-size:13px;color:#4a5a6a;margin:10px 0 3px}
+input,textarea{width:100%;padding:10px;border:1px solid var(--l);border-radius:6px;font:inherit;background:#fff}
+.row{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.mat{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--l)}
+.mat small{color:#667788;display:block}.mat input{text-align:right}.mat.on{background:#e3f5fd}
+button.p{background:var(--c);color:#04263a;border:0;padding:12px 16px;border-radius:6px;font:inherit;font-weight:700;width:100%;margin-top:12px}
+button.s{background:#fff;border:1px solid var(--l);padding:8px 12px;border-radius:6px;font:inherit}
+.tot{position:sticky;bottom:0;background:#fff;border-top:2px solid var(--c);padding:12px 14px;margin:14px -14px -14px;display:flex;justify-content:space-between;font-weight:700;font-size:17px}
+.hist{padding:10px 0;border-bottom:1px solid var(--l);display:flex;justify-content:space-between;gap:10px;cursor:pointer}
+h3{margin:18px 0 6px}
+/* Hoja de cotización (misma estructura que tu formato) */
+#hoja{display:none;background:#fff;max-width:800px;margin:0 auto;padding:16px;color:#000;font-size:12px}
+#hoja.show{display:block}body.ver nav,body.ver main{display:none}
+#hoja table{width:100%;border-collapse:collapse;margin-bottom:12px}
+#hoja td,#hoja th{border:1px solid #000;padding:2px 6px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#hoja th,#hoja .b{background:var(--c);font-weight:400}
+#hoja .r{text-align:right}#hoja .l{text-align:left}
+#hoja .top{display:grid;grid-template-columns:1fr 1.7fr;gap:14px;align-items:center;margin-bottom:12px}
+#hoja .top table{margin:0}
+.bar{display:flex;gap:8px;margin-bottom:12px}
+@media print{body{background:#fff}.noprint{display:none!important}#hoja{padding:0}@page{margin:12mm}}
+</style></head><body>
+<nav><button data-v="cotizar" class="on">Cotizar</button><button data-v="materiales">Materiales</button><button data-v="historial">Historial</button><button data-v="empresa">Empresa</button></nav>
+<main>
+<section id="v-cotizar" class="v on">
+  <div class="row"><div><label>Cliente</label><input id="cliente"></div><div><label>Fecha</label><input id="fecha" type="date"></div>
+  <div><label>Teléfono</label><input id="telefono" inputmode="tel"></div><div><label>Dirección</label><input id="direccion"></div></div>
+  <label>Descripción del trabajo</label><textarea id="descripcion" rows="2"></textarea>
+  <h3>Materiales: solo pon la cantidad</h3>
+  <input id="buscar" type="search" placeholder="Buscar material…">
+  <div id="lista"></div>
+  <h3>Líneas globales (taxi, instalación…)</h3>
+  <div id="globs"></div><button class="s" id="addglob">+ Línea global</button>
+  <label>Utilidades %</label><input id="pct" inputmode="decimal" style="max-width:120px">
+  <div class="tot" id="tot"></div>
+  <button class="p" id="generar">Ver cotización / PDF</button>
+</section>
+<section id="v-materiales" class="v">
+  <p>Cambia nombre, unidad o precio y se guarda solo.</p>
+  <div id="mats"></div>
+  <h3>Nuevo material</h3>
+  <div class="row" style="grid-template-columns:1fr 80px 100px"><input id="n-nombre" placeholder="Nombre"><input id="n-unidad" placeholder="UND"><input id="n-precio" inputmode="decimal" placeholder="Precio"></div>
+  <button class="p" id="addmat">Agregar material</button>
+</section>
+<section id="v-historial" class="v"><div id="hist"></div></section>
+<section id="v-empresa" class="v"><div id="emp"></div>
+  <label>Logo</label><input type="file" id="logo" accept="image/*"><div id="logoprev"></div>
+  <button class="p" id="saveemp">Guardar datos</button>
+</section>
+</main>
+<div id="hoja"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>'S/ '+Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=n=>Math.round((n+Number.EPSILON)*100)/100;
+const num=s=>{s=String(s??'').trim().replace(',','.');if(s.includes('/')){const[a,b]=s.split('/').map(parseFloat);return b?a/b:0}return parseFloat(s)||0};
+const fmtN=n=>String(+Number(n).toFixed(2));
+const dmy=f=>f?f.split('-').reverse().join('/'):'';
+const S={mats:[],cfg:{},qty:{},glob:[{nombre:'TAXI',monto:''},{nombre:'INSTALACION',monto:''}]};
+
+async function api(path,o={}){
+  const r=await fetch('/api'+path,{method:o.method||'GET',headers:{'Content-Type':'application/json','x-api-key':localStorage.getItem('cotkey')||''},body:o.body?JSON.stringify(o.body):undefined});
+  if(r.status===401){const k=prompt('Clave de acceso');if(k===null)throw new Error('Sin acceso');localStorage.setItem('cotkey',k);return api(path,o)}
+  const j=await r.json();if(!r.ok)throw new Error(j.error);return j;
+}
+const fail=e=>alert(e.message);
+
+// ---- Navegación ----
+function go(v){document.querySelectorAll('.v').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  if(v==='historial')historial().catch(fail)}
+document.querySelector('nav').onclick=e=>e.target.dataset.v&&go(e.target.dataset.v);
+
+// ---- Cotizar ----
+function lista(){const f=$('#buscar').value.toLowerCase();
+  $('#lista').innerHTML=S.mats.filter(m=>m.nombre.toLowerCase().includes(f)).map(m=>
+   `<div class="mat ${num(S.qty[m.id])>0?'on':''}"><div>${esc(m.nombre)}<small>${esc(m.unidad)} · ${money(m.precio)}</small></div><input inputmode="decimal" placeholder="Cant." value="${esc(S.qty[m.id]||'')}" data-id="${m.id}"></div>`).join('')
+   ||'<p>No hay materiales. Agrégalos en la pestaña Materiales.</p>'}
+function globs(){$('#globs').innerHTML=S.glob.map((g,i)=>
+  `<div class="row" style="grid-template-columns:1fr 110px 40px;margin-bottom:6px"><input data-i="${i}" data-k="nombre" value="${esc(g.nombre)}" placeholder="Concepto"><input data-i="${i}" data-k="monto" inputmode="decimal" value="${esc(g.monto)}" placeholder="S/"><button class="s" data-del="${i}">✕</button></div>`).join('')}
+const lineas=()=>S.mats.filter(m=>num(S.qty[m.id])>0).map(m=>({material_id:m.id,cantidad:num(S.qty[m.id])}));
+const globales=()=>S.glob.filter(g=>num(g.monto)>0).map(g=>({nombre:g.nombre||'GLOBAL',monto:num(g.monto)}));
+function totales(){let sub=0;lineas().forEach(l=>{const m=S.mats.find(x=>x.id==l.material_id);sub+=r2(l.cantidad*m.precio)});
+  globales().forEach(g=>sub+=r2(g.monto));const ut=r2(sub*num($('#pct').value)/100);
+  $('#tot').innerHTML=`<span>Total</span><span>${money(r2(sub+ut))}</span>`}
+$('#buscar').oninput=lista;
+$('#lista').oninput=e=>{const id=e.target.dataset.id;if(!id)return;S.qty[id]=e.target.value;e.target.closest('.mat').classList.toggle('on',num(e.target.value)>0);totales()};
+$('#globs').oninput=e=>{const{i,k}=e.target.dataset;if(i===undefined)return;S.glob[i][k]=e.target.value;totales()};
+$('#globs').onclick=e=>{const i=e.target.dataset.del;if(i===undefined)return;S.glob.splice(i,1);globs();totales()};
+$('#addglob').onclick=()=>{S.glob.push({nombre:'',monto:''});globs()};
+$('#pct').oninput=totales;
+$('#generar').onclick=async()=>{
+  if(!lineas().length&&!globales().length)return alert('Pon la cantidad de al menos un material.');
+  try{const c=await api('/cotizaciones',{method:'POST',body:{fecha:$('#fecha').value,cliente:$('#cliente').value,telefono:$('#telefono').value,direccion:$('#direccion').value,descripcion:$('#descripcion').value,utilidad_pct:num($('#pct').value),lineas:lineas(),globales:globales()}});
+  hoja(c)}catch(e){fail(e)}};
+
+// ---- Hoja imprimible ----
+function hoja(c){const g=S.cfg;
+  const rows=c.items.map(i=>i.global
+   ?`<tr><td>${esc(i.nombre)}</td><td colspan="3">GLOBAL</td><td class="r">${money(i.total)}</td></tr>`
+   :`<tr><td>${esc(i.nombre)}</td><td>${fmtN(i.cantidad)}</td><td>${esc(i.unidad)}</td><td class="r">${money(i.precio)}</td><td class="r">${money(i.total)}</td></tr>`).join('');
+  $('#hoja').innerHTML=`<div class="noprint bar"><button class="s" id="volver">← Volver</button><button class="p" style="margin:0" onclick="print()">Imprimir / Guardar PDF</button></div>
+  <div class="top"><div>${g.logo?`<img src="${g.logo}" style="max-width:100%;max-height:110px">`:`<b style="font-size:22px">${esc(g.empresa)}</b>`}</div>
+   <table><tr><th colspan="2">CLIENTE:</th></tr><tr><td>NOMBRE</td><td>${esc(c.cliente)}</td></tr><tr><td>TELEFONO</td><td>${esc(c.telefono)}</td></tr><tr><td>DIRECCION</td><td>${esc(c.direccion)}</td></tr><tr><td>FECHA</td><td>${dmy(c.fecha)}</td></tr></table></div>
+  <table><tr><th style="padding:8px">COTIZACION</th></tr></table>
+  <table><tr><th>DESCRIPCIÓN</th></tr><tr><td style="padding:8px">${esc(c.descripcion)}</td></tr></table>
+  <table><tr><th>MATERIALES</th><th>CANT. USO</th><th>UND</th><th>PRECIO UND</th><th>TOTAL</th></tr>${rows}
+   <tr><td colspan="4">UTILIDADES ${fmtN(c.utilidad_pct)}%</td><td class="r">${money(c.utilidad)}</td></tr>
+   <tr><td colspan="4"><b>SUB TOTAL</b></td><td class="r"><b>${money(c.total)}</b></td></tr></table>
+  <table><tr><td style="width:35%">GERENTE</td><td>${esc(g.gerente)}</td></tr><tr><td colspan="2">${esc(g.validez)}</td></tr><tr><td colspan="2">${esc(g.nota)}</td></tr></table>
+  <table><tr><th colspan="8">DATOS</th></tr><tr><td class="b">RUC:</td><td>${esc(g.ruc)}</td><td class="b">DIRECCION</td><td>${esc(g.direccion)}</td><td class="b">TELEF.</td><td>${esc(g.telefono)}</td><td class="b">CORREO E.</td><td>${esc(g.correo)}</td></tr></table>`;
+  $('#hoja').classList.add('show');document.body.classList.add('ver');scrollTo(0,0);
+  $('#volver').onclick=()=>{$('#hoja').classList.remove('show');document.body.classList.remove('ver')}}
+
+// ---- Historial ----
+async function historial(){const l=await api('/cotizaciones');
+  $('#hist').innerHTML=l.map(c=>`<div class="hist" data-id="${c.id}"><div><b>N° ${String(c.id).padStart(4,'0')}</b> · ${esc(c.cliente)}<br><small>${dmy(c.fecha)} · ${esc(c.descripcion)}</small></div><b>${money(c.total)}</b></div>`).join('')||'<p>Aún no hay cotizaciones.</p>'}
+$('#hist').onclick=e=>{const d=e.target.closest('.hist');if(d)api('/cotizaciones/'+d.dataset.id).then(hoja).catch(fail)};
+
+// ---- Materiales ----
+function mats(){$('#mats').innerHTML=S.mats.map(m=>
+  `<div class="row" style="grid-template-columns:1fr 70px 90px 40px;margin-bottom:6px" data-id="${m.id}"><input data-k="nombre" value="${esc(m.nombre)}"><input data-k="unidad" value="${esc(m.unidad)}"><input data-k="precio" inputmode="decimal" value="${m.precio}"><button class="s" data-del>✕</button></div>`).join('')}
+$('#mats').onchange=async e=>{const r=e.target.closest('[data-id]');if(!r||e.target.dataset.k===undefined)return;
+  const v=k=>r.querySelector(`[data-k=${k}]`).value;
+  try{await api('/materiales/'+r.dataset.id,{method:'PUT',body:{nombre:v('nombre'),unidad:v('unidad'),precio:num(v('precio'))}});await cargar()}catch(x){fail(x)}};
+$('#mats').onclick=async e=>{const r=e.target.closest('[data-id]');if(!r||!('del' in e.target.dataset)||!confirm('¿Borrar este material?'))return;
+  try{await api('/materiales/'+r.dataset.id,{method:'DELETE'});await cargar()}catch(x){fail(x)}};
+$('#addmat').onclick=async()=>{try{await api('/materiales',{method:'POST',body:{nombre:$('#n-nombre').value,unidad:$('#n-unidad').value||'UND',precio:num($('#n-precio').value)}});
+  ['#n-nombre','#n-unidad','#n-precio'].forEach(s=>$(s).value='');await cargar()}catch(e){fail(e)}};
+
+// ---- Empresa ----
+const CAMPOS=[['empresa','Nombre de la empresa'],['ruc','RUC'],['direccion','Dirección'],['telefono','Teléfono'],['correo','Correo'],['gerente','Gerente'],['validez','Texto de validez'],['nota','Nota (ej. NO INCLUYE IGV)'],['utilidad','Utilidades % por defecto']];
+function empresa(){$('#emp').innerHTML=CAMPOS.map(([k,t])=>`<label>${t}</label><input data-c="${k}" value="${esc(S.cfg[k])}">`).join('');
+  $('#logoprev').innerHTML=S.cfg.logo?`<img src="${S.cfg.logo}" style="max-height:70px;margin-top:6px">`:''}
+$('#logo').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{const k=Math.min(1,400/im.width),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.cfg.logo=cv.toDataURL('image/png');empresa()};im.src=URL.createObjectURL(f)};
+$('#saveemp').onclick=async()=>{document.querySelectorAll('[data-c]').forEach(i=>S.cfg[i.dataset.c]=i.value);
+  try{await api('/config',{method:'PUT',body:S.cfg});$('#pct').value=S.cfg.utilidad||10;totales();alert('Datos guardados')}catch(e){fail(e)}};
+
+// ---- Inicio ----
+async function cargar(){S.mats=await api('/materiales');lista();mats();totales()}
+(async()=>{try{S.cfg=await api('/config');$('#fecha').value=new Date().toLocaleDateString('en-CA');$('#pct').value=S.cfg.utilidad||10;globs();empresa();await cargar()}catch(e){fail(e)}})();
+</script></body></html>
