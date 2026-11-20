@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cotizador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@600;700&family=Cormorant+Garamond:ital,wght@0,600;1,500&display=swap" rel="stylesheet">
+<style>
+:root{--c:#00b0f0;--d:#14325c;--t:#1c2530;--l:#d5dde6;--bg:#f3f6f9}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--t);background:var(--bg)}
+nav{position:sticky;top:0;z-index:5;display:flex;background:var(--d)}
+nav button{flex:1;padding:14px 4px;border:0;background:none;color:#cfe3f5;font:inherit;font-weight:600}
+nav button.on{color:#fff;box-shadow:inset 0 -3px var(--c)}
+main{max-width:860px;margin:0 auto;padding:14px}
+.v{display:none}.v.on{display:block}
+label{display:block;font-size:13px;color:#4a5a6a;margin:10px 0 3px}
+input,textarea{width:100%;padding:10px;border:1px solid var(--l);border-radius:6px;font:inherit;background:#fff}
+.row{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.mat{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--l)}
+.mat small{color:#667788;display:block}.mat input{text-align:right}.mat.on{background:#e3f5fd}
+button.p{background:var(--c);color:#04263a;border:0;padding:12px 16px;border-radius:6px;font:inherit;font-weight:700;width:100%;margin-top:12px}
+button.s{background:#fff;border:1px solid var(--l);padding:8px 12px;border-radius:6px;font:inherit}
+.tot{position:sticky;bottom:0;background:#fff;border-top:2px solid var(--c);padding:12px 14px;margin:14px -14px -14px;display:flex;justify-content:space-between;font-weight:700;font-size:17px}
+.hist{padding:10px 0;border-bottom:1px solid var(--l);display:flex;justify-content:space-between;gap:10px;cursor:pointer}
+h3{margin:18px 0 6px}
+/* Hoja de cotización: 3 plantillas (A Plancha, B Ejecutivo, C Corte) */
+#bar{display:none;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+body.ver #bar{display:flex}body.ver nav,body.ver main{display:none}
+#bar select{width:auto;padding:9px;border:1px solid var(--l);border-radius:6px;font:inherit;background:#fff}
+#bar button.p{width:auto;margin:0}
+#hoja{display:none;--k:1;--h:297;font:400 12.5px/1.4 "Barlow",system-ui,sans-serif;color:#1f2933;background:#fff;width:min(210mm,100%);margin:0 auto;position:relative;flex-direction:column;box-shadow:0 2px 16px #0003;overflow:hidden}
+#hoja.show{display:flex}
+#hoja .in{flex:1;display:flex;flex-direction:column}
+#hoja table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+#hoja th.c,#hoja td.c{text-align:center}
+#hoja .h{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#hoja .br{display:flex;align-items:center;gap:12px;min-width:0}
+#hoja .br img{max-height:20mm;max-width:44mm;object-fit:contain}
+#hoja .nm{overflow-wrap:anywhere}
+#hoja .t{text-align:right;flex:none}#hoja .t b{display:block}#hoja .t span{display:block;margin-top:5px;font-size:13px}
+#hoja .g2{display:grid;grid-template-columns:1fr 1.5fr;gap:7mm;margin:6mm 0 5mm}
+#hoja .k{font:600 12px "Barlow Condensed",sans-serif;letter-spacing:.04em;color:#5b6b7a;margin-bottom:2px}
+#hoja .big{font:600 17px/1.2 "Barlow",sans-serif}
+#hoja .tt{margin:5mm 0 0 auto;width:min(100%,88mm)}
+#hoja .tt div{display:flex;justify-content:space-between;padding:4px 8px}
+#hoja .tt small{display:block;text-align:right;padding:3px 8px;color:#5b6b7a}
+#hoja .cf{display:grid;grid-template-columns:1.4fr 1fr;gap:10mm;margin-top:10mm;align-items:end}
+#hoja .cf p{margin:2px 0}
+#hoja .fi{border-top:1px solid #1f2933;padding-top:4px;text-align:center}
+#hoja .ft{margin-top:10mm;display:grid;grid-template-columns:1.1fr 2fr 1fr 1.6fr;gap:8px;font-size:11.5px}
+#hoja .ft small{display:block;font:600 11px "Barlow Condensed",sans-serif;letter-spacing:.05em}
+#hoja .lema{grid-column:1/-1;font:600 13px "Barlow Condensed",sans-serif;letter-spacing:.16em}
+/* A · Plancha */
+.tA:before{content:"";position:absolute;left:0;top:0;bottom:0;width:6mm;background:#0b2a4a}
+.tA:after{content:"";position:absolute;left:6mm;top:0;bottom:0;width:1.3mm;background:#00b0f0}
+.tA .hd{padding:8mm 10mm 0 15mm}.tA .in{padding:0 10mm 0 15mm}
+.tA .h{padding-bottom:9px;border-bottom:2px solid #0b2a4a}
+.tA .nm{font:700 32px/1 "Barlow Condensed",sans-serif;color:#0b2a4a}
+.tA .t b{font:700 22px/1 "Barlow Condensed",sans-serif;letter-spacing:.14em;color:#0b2a4a}
+.tA th{background:#0b2a4a;color:#fff;font:600 12px "Barlow Condensed",sans-serif;letter-spacing:.05em;padding:6px 8px;text-align:right}
+.tA td{padding:5px 8px;border-bottom:1px solid #d3dce5;text-align:right}
+.tA th:first-child,.tA td:first-child{text-align:left}.tA tr.gl td{background:#e9eef3}
+.tA .tt .g{margin-top:3px;background:#0b2a4a;color:#fff;border-left:4px solid #00b0f0;padding:8px 10px;font:700 22px/1 "Barlow Condensed",sans-serif}
+.tA .ft{background:#0b2a4a;color:#fff;padding:5mm 10mm 5mm 15mm}.tA .ft small,.tA .lema{color:#00b0f0}
+/* B · Ejecutivo */
+.tB{border-top:6px solid #0077b6}
+.tB .hd{padding:10mm 15mm 0}.tB .in{padding:0 15mm}
+.tB .h{padding-bottom:7mm;border-bottom:1px solid #14202e}
+.tB .nm{font:600 30px/1 "Cormorant Garamond",serif;letter-spacing:.05em}
+.tB .t b{font:italic 500 25px/1 "Cormorant Garamond",serif}.tB .t span{color:#5b6b7a}
+.tB .big{font:600 20px/1.2 "Cormorant Garamond",serif}
+.tB th{font:600 12px "Barlow",sans-serif;color:#5b6b7a;padding:0 0 9px;text-align:right;border-bottom:1.5px solid #14202e}
+.tB td{padding:10px 0;border-bottom:1px solid #d5dbe2;text-align:right}
+.tB th:first-child,.tB td:first-child{text-align:left}
+.tB .tt div{padding:4px 0}
+.tB .tt .g{border-top:1px solid #14202e;margin-top:8px;padding-top:10px;align-items:baseline;font:600 36px/1 "Cormorant Garamond",serif;color:#0077b6}
+.tB .tt .g span:first-child{font:600 14px "Barlow",sans-serif;color:#14202e}
+.tB .ft{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin:10mm 15mm 0;padding:5mm 0 10mm;border-top:1px solid #c9d1da;color:#5b6b7a;text-align:center}
+.tB .ft small{display:inline;color:#14202e;margin-right:4px}.tB .lema{flex-basis:100%;color:#14202e;letter-spacing:.22em}
+/* C · Corte */
+.tC .hd{position:relative;height:60mm}
+.tC .hd:before{content:"";position:absolute;inset:0;background:#00b0f0;clip-path:polygon(0 0,100% 0,100% 66%,56% 100%,0 100%)}
+.tC .h{position:absolute;left:0;right:0;top:0;height:55mm;background:#0b2a4a;color:#fff;clip-path:polygon(0 0,100% 0,100% 66%,56% 100%,0 100%);padding:9mm 15mm;align-items:flex-start}
+.tC .br img{background:#fff;padding:5px;border-radius:4px}
+.tC .nm{font:700 40px/1 "Barlow Condensed",sans-serif}
+.tC .t b{font:700 24px/1 "Barlow Condensed",sans-serif;letter-spacing:.14em}
+.tC .in{padding:4mm 15mm 0}
+.tC .k{border-top:3px solid #00b0f0;padding-top:7px}
+.tC th{background:#e4edf5;color:#0b2a4a;font:700 12px "Barlow Condensed",sans-serif;letter-spacing:.05em;padding:8px;text-align:right}
+.tC td{padding:7px 8px;border-bottom:1px solid #d3dce5;text-align:right}
+.tC th:first-child,.tC td:first-child{text-align:left}
+.tC .tt .g{margin-top:6px;background:#0b2a4a;color:#fff;padding:12px 16px;font:700 26px/1 "Barlow Condensed",sans-serif;clip-path:polygon(14px 0,100% 0,100% 100%,0 100%,0 14px)}
+.tC .ft{margin:10mm 15mm 0;border-top:3px solid #0b2a4a;padding:4mm 0 8mm}.tC .ft small{color:#0b2a4a}.tC .lema{color:#0b2a4a}
+@media screen and (max-width:560px){#hoja .g2,#hoja .cf{grid-template-columns:1fr}#hoja .ft{grid-template-columns:1fr 1fr}#hoja .hd,#hoja .in{padding-left:11mm;padding-right:5mm}#hoja.tC .h{padding:7mm 5mm 7mm 11mm}#hoja.tC .nm{font-size:28px}#hoja.tB .ft,#hoja.tC .ft{margin-left:5mm;margin-right:5mm}#hoja.tA .ft{padding-left:11mm}#hoja .nm{font-size:24px!important}#hoja .br img{max-width:26mm}}
+@media print{body{background:#fff}#bar,.noprint{display:none!important}#hoja{width:210mm;zoom:var(--k);min-height:calc(var(--h)*1mm - 1mm);box-shadow:none}}
+</style></head><body>
+<nav><button data-v="cotizar" class="on">Cotizar</button><button data-v="materiales">Materiales</button><button data-v="historial">Historial</button><button data-v="empresa">Empresa</button></nav>
+<main>
+<section id="v-cotizar" class="v on">
+  <div class="row"><div><label>Cliente</label><input id="cliente"></div><div><label>Fecha</label><input id="fecha" type="date"></div>
+  <div><label>Teléfono</label><input id="telefono" inputmode="tel"></div><div><label>Dirección</label><input id="direccion"></div></div>
+  <label>Descripción del trabajo</label><textarea id="descripcion" rows="2"></textarea>
+  <h3>Materiales: solo pon la cantidad</h3>
+  <input id="buscar" type="search" placeholder="Buscar material…">
+  <div id="lista"></div>
+  <h3>Líneas globales (taxi, instalación…)</h3>
+  <div id="globs"></div><button class="s" id="addglob">+ Línea global</button>
+  <label>Utilidades %</label><input id="pct" inputmode="decimal" style="max-width:120px">
+  <div class="tot" id="tot"></div>
+  <button class="p" id="generar">Ver cotización / PDF</button>
+</section>
+<section id="v-materiales" class="v">
+  <p>Cambia nombre, unidad o precio y se guarda solo.</p>
+  <div id="mats"></div>
+  <h3>Nuevo material</h3>
+  <div class="row" style="grid-template-columns:1fr 80px 100px"><input id="n-nombre" placeholder="Nombre"><input id="n-unidad" placeholder="UND"><input id="n-precio" inputmode="decimal" placeholder="Precio"></div>
+  <button class="p" id="addmat">Agregar material</button>
+</section>
+<section id="v-historial" class="v"><div id="hist"></div></section>
+<section id="v-empresa" class="v"><div id="emp"></div>
+  <label>Logo</label><input type="file" id="logo" accept="image/*"><div id="logoprev"></div>
+  <button class="p" id="saveemp">Guardar datos</button>
+</section>
+</main>
+<div id="bar" class="noprint"><button class="s" id="volver">← Volver</button><select id="sel-tpl" aria-label="Plantilla"></select><select id="sel-pap" aria-label="Tamaño de papel"></select><button class="p" onclick="print()">Imprimir / Guardar PDF</button></div>
+<style id="pg"></style>
+<div id="hoja"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>'S/ '+Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=n=>Math.round((n+Number.EPSILON)*100)/100;
+const num=s=>{s=String(s??'').trim().replace(',','.');if(s.includes('/')){const[a,b]=s.split('/').map(parseFloat);return b?a/b:0}return parseFloat(s)||0};
+const fmtN=n=>String(+Number(n).toFixed(2));
+const dmy=f=>f?f.split('-').reverse().join('/'):'';
+const S={mats:[],cfg:{},qty:{},glob:[{nombre:'TAXI',monto:''},{nombre:'INSTALACION',monto:''}]};
+
+async function api(path,o={}){
+  const r=await fetch('/api'+path,{method:o.method||'GET',headers:{'Content-Type':'application/json','x-api-key':localStorage.getItem('cotkey')||''},body:o.body?JSON.stringify(o.body):undefined});
+  if(r.status===401){const k=prompt('Clave de acceso');if(k===null)throw new Error('Sin acceso');localStorage.setItem('cotkey',k);return api(path,o)}
+  const j=await r.json();if(!r.ok)throw new Error(j.error);return j;
+}
+const fail=e=>alert(e.message);
+
+// ---- Navegación ----
+function go(v){document.querySelectorAll('.v').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  if(v==='historial')historial().catch(fail)}
+document.querySelector('nav').onclick=e=>e.target.dataset.v&&go(e.target.dataset.v);
+
+// ---- Cotizar ----
+function lista(){const f=$('#buscar').value.toLowerCase();
+  $('#lista').innerHTML=S.mats.filter(m=>m.nombre.toLowerCase().includes(f)).map(m=>
+   `<div class="mat ${num(S.qty[m.id])>0?'on':''}"><div>${esc(m.nombre)}<small>${esc(m.unidad)} · ${money(m.precio)}</small></div><input inputmode="decimal" placeholder="Cant." value="${esc(S.qty[m.id]||'')}" data-id="${m.id}"></div>`).join('')
+   ||'<p>No hay materiales. Agrégalos en la pestaña Materiales.</p>'}
+function globs(){$('#globs').innerHTML=S.glob.map((g,i)=>
+  `<div class="row" style="grid-template-columns:1fr 110px 40px;margin-bottom:6px"><input data-i="${i}" data-k="nombre" value="${esc(g.nombre)}" placeholder="Concepto"><input data-i="${i}" data-k="monto" inputmode="decimal" value="${esc(g.monto)}" placeholder="S/"><button class="s" data-del="${i}">✕</button></div>`).join('')}
+const lineas=()=>S.mats.filter(m=>num(S.qty[m.id])>0).map(m=>({material_id:m.id,cantidad:num(S.qty[m.id])}));
+const globales=()=>S.glob.filter(g=>num(g.monto)>0).map(g=>({nombre:g.nombre||'GLOBAL',monto:num(g.monto)}));
+function totales(){let sub=0;lineas().forEach(l=>{const m=S.mats.find(x=>x.id==l.material_id);sub+=r2(l.cantidad*m.precio)});
+  globales().forEach(g=>sub+=r2(g.monto));const ut=r2(sub*num($('#pct').value)/100);
+  $('#tot').innerHTML=`<span>Total</span><span>${money(r2(sub+ut))}</span>`}
+$('#buscar').oninput=lista;
+$('#lista').oninput=e=>{const id=e.target.dataset.id;if(!id)return;S.qty[id]=e.target.value;e.target.closest('.mat').classList.toggle('on',num(e.target.value)>0);totales()};
+$('#globs').oninput=e=>{const{i,k}=e.target.dataset;if(i===undefined)return;S.glob[i][k]=e.target.value;totales()};
+$('#globs').onclick=e=>{const i=e.target.dataset.del;if(i===undefined)return;S.glob.splice(i,1);globs();totales()};
+$('#addglob').onclick=()=>{S.glob.push({nombre:'',monto:''});globs()};
+$('#pct').oninput=totales;
+$('#generar').onclick=async()=>{
+  if(needLogo())return;
+  if(!lineas().length&&!globales().length)return alert('Pon la cantidad de al menos un material.');
+  try{const c=await api('/cotizaciones',{method:'POST',body:{fecha:$('#fecha').value,cliente:$('#cliente').value,telefono:$('#telefono').value,direccion:$('#direccion').value,descripcion:$('#descripcion').value,utilidad_pct:num($('#pct').value),lineas:lineas(),globales:globales()}});
+  hoja(c)}catch(e){fail(e)}};
+
+// ---- Hoja imprimible: plantilla y tamaño a elección ----
+const PLANT=[['A','Plancha'],['B','Ejecutivo'],['C','Corte']],PAPEL={A4:[210,297],A3:[297,420],A5:[148,210],Carta:[216,279]};
+const pref=(k,d)=>{try{return localStorage.getItem(k)||d}catch{return d}};
+$('#sel-tpl').innerHTML=PLANT.map(([v,n])=>`<option value="${v}">Plantilla ${v} · ${n}</option>`).join('');
+$('#sel-pap').innerHTML=Object.keys(PAPEL).map(p=>`<option>${p}</option>`).join('');
+$('#sel-tpl').value=pref('cotplantilla','A');$('#sel-pap').value=pref('cotpapel','A4');
+if(!$('#sel-tpl').value)$('#sel-tpl').value='A';if(!$('#sel-pap').value)$('#sel-pap').value='A4';
+$('#sel-tpl').onchange=$('#sel-pap').onchange=()=>S.cur&&pintar();
+$('#volver').onclick=()=>{$('#hoja').classList.remove('show');document.body.classList.remove('ver')};
+function needLogo(){if(S.cfg.logo)return false;alert('Sube el logo de tu empresa en la pestaña Empresa: la cotización siempre lleva logo.');go('empresa');return true}
+function hoja(c){S.cur=c;pintar();document.body.classList.add('ver');scrollTo(0,0)}
+function pintar(){const c=S.cur,g=S.cfg,tp=$('#sel-tpl').value,pp=$('#sel-pap').value,[w,h]=PAPEL[pp],k=w/210,el=$('#hoja');
+  try{localStorage.setItem('cotplantilla',tp);localStorage.setItem('cotpapel',pp)}catch{}
+  el.className='show t'+tp;el.style.setProperty('--k',k);el.style.setProperty('--h',h/k);
+  $('#pg').textContent=`@page{size:${w}mm ${h}mm;margin:0}`;
+  const rows=c.items.map(i=>i.global
+   ?`<tr class="gl"><td>${esc(i.nombre)}</td><td class="c" colspan="3">Global</td><td>${money(i.total)}</td></tr>`
+   :`<tr><td>${esc(i.nombre)}</td><td class="c">${fmtN(i.cantidad)}</td><td class="c">${esc(i.unidad)}</td><td>${money(i.precio)}</td><td>${money(i.total)}</td></tr>`).join('');
+  const dato=(t,v)=>v?`<div><small>${t}</small>${esc(v)}</div>`:'';
+  const contacto=[c.telefono,c.direccion].filter(Boolean).map(esc).join('<br>');
+  el.innerHTML=`<div class="hd"><div class="h"><div class="br">${g.logo?`<img src="${g.logo}" alt="">`:''}<div class="nm">${esc(g.empresa)}</div></div>
+   <div class="t"><b>COTIZACIÓN</b><span>N° ${String(c.id).padStart(4,'0')} · ${dmy(c.fecha)}</span></div></div></div>
+  <div class="in"><div class="g2"><div><div class="k">Cliente</div><div class="big">${esc(c.cliente)||'—'}</div>${contacto?`<div>${contacto}</div>`:''}</div>
+   <div><div class="k">Trabajo a realizar</div><div class="big">${esc(c.descripcion)||'—'}</div></div></div>
+  <table><tr><th>Descripción</th><th class="c">Cant.</th><th class="c">Und.</th><th>P. unitario</th><th>Importe</th></tr>${rows}</table>
+  <div class="tt"><div><span>Materiales y servicios</span><span>${money(c.subtotal)}</span></div>
+   <div><span>Utilidades ${fmtN(c.utilidad_pct)}%</span><span>${money(c.utilidad)}</span></div>
+   <div class="g"><span>TOTAL</span><span>${money(c.total)}</span></div><small>${esc(g.nota)}</small></div>
+  <div class="cf"><div><div class="k">Condiciones</div><p>${esc(g.validez)}</p></div>
+   ${g.gerente?`<div class="fi">${esc(g.gerente)}<br><span style="color:#5b6b7a">Gerente</span></div>`:'<div></div>'}</div></div>
+  <div class="ft">${g.lema?`<div class="lema">${esc(g.lema)}</div>`:''}${dato('RUC',g.ruc)}${dato('Dirección',g.direccion)}${dato('Teléfono',g.telefono)}${dato('Correo',g.correo)}</div>`}
+
+// ---- Historial ----
+async function historial(){const l=await api('/cotizaciones');
+  $('#hist').innerHTML=l.map(c=>`<div class="hist" data-id="${c.id}"><div><b>N° ${String(c.id).padStart(4,'0')}</b> · ${esc(c.cliente)}<br><small>${dmy(c.fecha)} · ${esc(c.descripcion)}</small></div><b>${money(c.total)}</b></div>`).join('')||'<p>Aún no hay cotizaciones.</p>'}
+$('#hist').onclick=e=>{const d=e.target.closest('.hist');if(d){if(needLogo())return;api('/cotizaciones/'+d.dataset.id).then(hoja).catch(fail)}};
+
+// ---- Materiales ----
+function mats(){$('#mats').innerHTML=S.mats.map(m=>
+  `<div class="row" style="grid-template-columns:1fr 70px 90px 40px;margin-bottom:6px" data-id="${m.id}"><input data-k="nombre" value="${esc(m.nombre)}"><input data-k="unidad" value="${esc(m.unidad)}"><input data-k="precio" inputmode="decimal" value="${m.precio}"><button class="s" data-del>✕</button></div>`).join('')}
+$('#mats').onchange=async e=>{const r=e.target.closest('[data-id]');if(!r||e.target.dataset.k===undefined)return;
+  const v=k=>r.querySelector(`[data-k=${k}]`).value;
+  try{await api('/materiales/'+r.dataset.id,{method:'PUT',body:{nombre:v('nombre'),unidad:v('unidad'),precio:num(v('precio'))}});await cargar()}catch(x){fail(x)}};
+$('#mats').onclick=async e=>{const r=e.target.closest('[data-id]');if(!r||!('del' in e.target.dataset)||!confirm('¿Borrar este material?'))return;
+  try{await api('/materiales/'+r.dataset.id,{method:'DELETE'});await cargar()}catch(x){fail(x)}};
+$('#addmat').onclick=async()=>{try{await api('/materiales',{method:'POST',body:{nombre:$('#n-nombre').value,unidad:$('#n-unidad').value||'UND',precio:num($('#n-precio').value)}});
+  ['#n-nombre','#n-unidad','#n-precio'].forEach(s=>$(s).value='');await cargar()}catch(e){fail(e)}};
+
+// ---- Empresa ----
+const CAMPOS=[['empresa','Nombre de la empresa'],['ruc','RUC'],['direccion','Dirección'],['telefono','Teléfono'],['correo','Correo'],['gerente','Gerente'],['validez','Texto de validez'],['nota','Nota (ej. NO INCLUYE IGV)'],['lema','Lema (pie de la cotización)'],['utilidad','Utilidades % por defecto']];
+function empresa(){$('#emp').innerHTML=CAMPOS.map(([k,t])=>`<label>${t}</label><input data-c="${k}" value="${esc(S.cfg[k])}">`).join('');
+  $('#logoprev').innerHTML=S.cfg.logo?`<img src="${S.cfg.logo}" style="max-height:70px;margin-top:6px">`:''}
+$('#logo').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{const k=Math.min(1,400/im.width),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.cfg.logo=cv.toDataURL('image/png');empresa()};im.src=URL.createObjectURL(f)};
+$('#saveemp').onclick=async()=>{document.querySelectorAll('[data-c]').forEach(i=>S.cfg[i.dataset.c]=i.value);
+  try{await api('/config',{method:'PUT',body:S.cfg});$('#pct').value=S.cfg.utilidad||10;totales();alert('Datos guardados')}catch(e){fail(e)}};
+
+// ---- Inicio ----
+async function cargar(){S.mats=await api('/materiales');lista();mats();totales()}
+(async()=>{try{S.cfg=await api('/config');$('#fecha').value=new Date().toLocaleDateString('en-CA');$('#pct').value=S.cfg.utilidad||10;globs();empresa();await cargar()}catch(e){fail(e)}})();
+</script></body></html>
