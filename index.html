@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 body{margin:0;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--t);background:var(--bg)}
 nav{position:sticky;top:0;z-index:5;display:flex;background:var(--d)}
-nav button{flex:1;padding:14px 4px;border:0;background:none;color:#cfe3f5;font:inherit;font-weight:600}
+nav button{flex:1;padding:14px 2px;border:0;background:none;color:#cfe3f5;font:inherit;font-size:13.5px;font-weight:600}
 nav button.on{color:#fff;box-shadow:inset 0 -3px var(--c)}
 main{max-width:860px;margin:0 auto;padding:14px}
 .v{display:none}.v.on{display:block}
@@ -23,6 +23,9 @@ button.s{background:#fff;border:1px solid var(--l);padding:8px 12px;border-radiu
 .tot{position:sticky;bottom:0;background:#fff;border-top:2px solid var(--c);padding:12px 14px;margin:14px -14px -14px;display:flex;justify-content:space-between;font-weight:700;font-size:17px}
 .hist{padding:10px 0;border-bottom:1px solid var(--l);display:flex;justify-content:space-between;gap:10px;cursor:pointer}
 h3{margin:18px 0 6px}
+.tc{display:inline-block;text-align:center;padding:10px;margin:0 8px 8px 0;border:2px solid var(--l);border-radius:8px;background:#fff;cursor:pointer;vertical-align:top}
+.tc b{display:block;margin-top:6px}.tc.on,.pp.on{border-color:var(--c);background:#e3f5fd}
+.pp{padding:10px 16px;margin:0 8px 8px 0;border:2px solid var(--l);border-radius:8px;background:#fff;font:inherit}.pp small{display:block;color:#667788}
 /* Hoja de cotización: 3 plantillas (A Plancha, B Ejecutivo, C Corte) */
 #bar{display:none;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
 body.ver #bar{display:flex}body.ver nav,body.ver main{display:none}
@@ -94,7 +97,7 @@ body.ver #bar{display:flex}body.ver nav,body.ver main{display:none}
 @media screen and (max-width:560px){#hoja .g2,#hoja .cf{grid-template-columns:1fr}#hoja .ft{grid-template-columns:1fr 1fr}#hoja .hd,#hoja .in{padding-left:11mm;padding-right:5mm}#hoja.tC .h{padding:7mm 5mm 7mm 11mm}#hoja.tC .nm{font-size:28px}#hoja.tB .ft,#hoja.tC .ft{margin-left:5mm;margin-right:5mm}#hoja.tA .ft{padding-left:11mm}#hoja .nm{font-size:24px!important}#hoja .br img{max-width:26mm}}
 @media print{body{background:#fff}#bar,.noprint{display:none!important}#hoja{width:210mm;zoom:var(--k);min-height:calc(var(--h)*1mm - 1mm);box-shadow:none}}
 </style></head><body>
-<nav><button data-v="cotizar" class="on">Cotizar</button><button data-v="materiales">Materiales</button><button data-v="historial">Historial</button><button data-v="empresa">Empresa</button></nav>
+<nav><button data-v="cotizar" class="on">Cotizar</button><button data-v="materiales">Materiales</button><button data-v="historial">Historial</button><button data-v="empresa">Empresa</button><button data-v="config">Config</button></nav>
 <main>
 <section id="v-cotizar" class="v on">
   <div class="row"><div><label>Cliente</label><input id="cliente"></div><div><label>Fecha</label><input id="fecha" type="date"></div>
@@ -121,6 +124,9 @@ body.ver #bar{display:flex}body.ver nav,body.ver main{display:none}
   <label>Logo</label><input type="file" id="logo" accept="image/*"><div id="logoprev"></div>
   <button class="p" id="saveemp">Guardar datos</button>
 </section>
+<section id="v-config" class="v"><h3>Plantilla de cotización</h3><p>Toca la que quieres usar. Se aplica a todas tus cotizaciones.</p><div id="tpls"></div>
+  <h3>Tamaño de papel</h3><div id="paps"></div>
+  <button class="p" id="saveconf">Guardar configuración</button></section>
 </main>
 <div id="bar" class="noprint"><button class="s" id="volver">← Volver</button><select id="sel-tpl" aria-label="Plantilla"></select><select id="sel-pap" aria-label="Tamaño de papel"></select><button class="p" onclick="print()">Imprimir / Guardar PDF</button></div>
 <style id="pg"></style>
@@ -145,7 +151,7 @@ const fail=e=>alert(e.message);
 // ---- Navegación ----
 function go(v){document.querySelectorAll('.v').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  if(v==='historial')historial().catch(fail)}
+  if(v==='historial')historial().catch(fail);if(v==='config')conf()}
 document.querySelector('nav').onclick=e=>e.target.dataset.v&&go(e.target.dataset.v);
 
 // ---- Cotizar ----
@@ -218,13 +224,23 @@ $('#addmat').onclick=async()=>{try{await api('/materiales',{method:'POST',body:{
 
 // ---- Empresa ----
 const CAMPOS=[['empresa','Nombre de la empresa'],['ruc','RUC'],['direccion','Dirección'],['telefono','Teléfono'],['correo','Correo'],['gerente','Gerente'],['validez','Texto de validez'],['nota','Nota (ej. NO INCLUYE IGV)'],['lema','Lema (pie de la cotización)'],['utilidad','Utilidades % por defecto']];
-function empresa(){$('#emp').innerHTML=CAMPOS.map(([k,t])=>`<label>${t}</label><input data-c="${k}" value="${esc(S.cfg[k])}">`).join('')
-  +`<label>Plantilla de cotización por defecto</label><select data-c="plantilla">${PLANT.map(([v,n])=>`<option value="${v}">Plantilla ${v} · ${n}</option>`).join('')}</select><label>Tamaño de papel por defecto</label><select data-c="papel">${Object.keys(PAPEL).map(p=>`<option>${p}</option>`).join('')}</select>`;
-  $('#emp [data-c=plantilla]').value=S.cfg.plantilla||'A';$('#emp [data-c=papel]').value=S.cfg.papel||'A4';
+function empresa(){$('#emp').innerHTML=CAMPOS.map(([k,t])=>`<label>${t}</label><input data-c="${k}" value="${esc(S.cfg[k])}">`).join('');
   $('#logoprev').innerHTML=S.cfg.logo?`<img src="${S.cfg.logo}" style="max-height:70px;margin-top:6px">`:''}
 $('#logo').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{const k=Math.min(1,400/im.width),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.cfg.logo=cv.toDataURL('image/png');empresa()};im.src=URL.createObjectURL(f)};
 $('#saveemp').onclick=async()=>{document.querySelectorAll('[data-c]').forEach(i=>S.cfg[i.dataset.c]=i.value);
   try{await api('/config',{method:'PUT',body:S.cfg});$('#pct').value=S.cfg.utilidad||10;$('#sel-tpl').value=S.cfg.plantilla||'A';$('#sel-pap').value=S.cfg.papel||'A4';totales();alert('Datos guardados')}catch(e){fail(e)}};
+
+// ---- Configuración ----
+const MINI={
+A:'<rect width="5" height="84" fill="#0b2a4a"/><rect x="5" width="1.5" height="84" fill="#00b0f0"/><rect x="12" y="8" width="24" height="5" fill="#0b2a4a"/><rect x="12" y="16" width="42" height="1.2" fill="#0b2a4a"/><rect x="12" y="28" width="42" height="4" fill="#0b2a4a"/><path d="M12 36h42M12 41h42M12 46h42" stroke="#c5d0da" stroke-width=".8"/><rect x="30" y="54" width="24" height="7" fill="#0b2a4a"/><rect y="74" width="60" height="10" fill="#0b2a4a"/>',
+B:'<rect width="60" height="2" fill="#0077b6"/><rect x="10" y="9" width="22" height="4" fill="#14202e"/><rect x="10" y="17" width="40" height=".7" fill="#14202e"/><path d="M10 30h40M10 36h40M10 42h40M10 48h40" stroke="#c5d0da" stroke-width=".7"/><rect x="34" y="56" width="16" height="5" fill="#0077b6"/><rect x="10" y="74" width="40" height=".7" fill="#c9d1da"/>',
+C:'<polygon points="0,0 60,0 60,20 34,28 0,28" fill="#00b0f0"/><polygon points="0,0 60,0 60,17 34,25 0,25" fill="#0b2a4a"/><rect x="8" y="7" width="22" height="5" fill="#fff"/><path d="M8 38h44M8 44h44M8 50h44" stroke="#c5d0da" stroke-width=".8"/><rect x="30" y="58" width="22" height="7" fill="#0b2a4a"/><rect x="8" y="74" width="44" height="1.5" fill="#0b2a4a"/>'};
+function conf(){const c=S.conf=S.conf||{plantilla:S.cfg.plantilla||'A',papel:S.cfg.papel||'A4'};
+  $('#tpls').innerHTML=PLANT.map(([v,n])=>`<div class="tc ${c.plantilla===v?'on':''}" data-t="${v}"><svg viewBox="0 0 60 84" width="84" height="118" style="background:#fff;border:1px solid var(--l)">${MINI[v]}</svg><b>${v} · ${n}</b></div>`).join('');
+  $('#paps').innerHTML=Object.entries(PAPEL).map(([p,[w,h]])=>`<button class="pp ${c.papel===p?'on':''}" data-p="${p}"><b>${p}</b><small>${w} × ${h} mm</small></button>`).join('')}
+$('#tpls').onclick=e=>{const d=e.target.closest('[data-t]');if(d){S.conf.plantilla=d.dataset.t;conf()}};
+$('#paps').onclick=e=>{const d=e.target.closest('[data-p]');if(d){S.conf.papel=d.dataset.p;conf()}};
+$('#saveconf').onclick=async()=>{try{await api('/config',{method:'PUT',body:{plantilla:S.conf.plantilla,papel:S.conf.papel}});Object.assign(S.cfg,S.conf);$('#sel-tpl').value=S.cfg.plantilla;$('#sel-pap').value=S.cfg.papel;alert('Configuración guardada')}catch(e){fail(e)}};
 
 // ---- Inicio ----
 async function cargar(){S.mats=await api('/materiales');lista();mats();totales()}
