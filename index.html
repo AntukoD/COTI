@@ -14,7 +14,7 @@ nav button.on{color:#fff;box-shadow:inset 0 -3px var(--c)}
 main{max-width:860px;margin:0 auto;padding:14px}
 .v{display:none}.v.on{display:block}
 label{display:block;font-size:13px;color:#4a5a6a;margin:10px 0 3px}
-input,textarea{width:100%;padding:10px;border:1px solid var(--l);border-radius:6px;font:inherit;background:#fff}
+input,textarea,select{width:100%;padding:10px;border:1px solid var(--l);border-radius:6px;font:inherit;background:#fff}
 .row{display:grid;gap:8px;grid-template-columns:1fr 1fr}
 .mat{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--l)}
 .mat small{color:#667788;display:block}.mat input{text-align:right}.mat.on{background:#e3f5fd}
@@ -174,17 +174,13 @@ $('#generar').onclick=async()=>{
 
 // ---- Hoja imprimible: plantilla y tamaño a elección ----
 const PLANT=[['A','Plancha'],['B','Ejecutivo'],['C','Corte']],PAPEL={A4:[210,297],A3:[297,420],A5:[148,210],Carta:[216,279]};
-const pref=(k,d)=>{try{return localStorage.getItem(k)||d}catch{return d}};
 $('#sel-tpl').innerHTML=PLANT.map(([v,n])=>`<option value="${v}">Plantilla ${v} · ${n}</option>`).join('');
 $('#sel-pap').innerHTML=Object.keys(PAPEL).map(p=>`<option>${p}</option>`).join('');
-$('#sel-tpl').value=pref('cotplantilla','A');$('#sel-pap').value=pref('cotpapel','A4');
-if(!$('#sel-tpl').value)$('#sel-tpl').value='A';if(!$('#sel-pap').value)$('#sel-pap').value='A4';
 $('#sel-tpl').onchange=$('#sel-pap').onchange=()=>S.cur&&pintar();
 $('#volver').onclick=()=>{$('#hoja').classList.remove('show');document.body.classList.remove('ver')};
 function needLogo(){if(S.cfg.logo)return false;alert('Sube el logo de tu empresa en la pestaña Empresa: la cotización siempre lleva logo.');go('empresa');return true}
 function hoja(c){S.cur=c;pintar();document.body.classList.add('ver');scrollTo(0,0)}
-function pintar(){const c=S.cur,g=S.cfg,tp=$('#sel-tpl').value,pp=$('#sel-pap').value,[w,h]=PAPEL[pp],k=w/210,el=$('#hoja');
-  try{localStorage.setItem('cotplantilla',tp);localStorage.setItem('cotpapel',pp)}catch{}
+function pintar(){const c=S.cur,g=S.cfg,tp=$('#sel-tpl').value||'A',pp=$('#sel-pap').value||'A4',[w,h]=PAPEL[pp],k=w/210,el=$('#hoja');
   el.className='show t'+tp;el.style.setProperty('--k',k);el.style.setProperty('--h',h/k);
   $('#pg').textContent=`@page{size:${w}mm ${h}mm;margin:0}`;
   const rows=c.items.map(i=>i.global
@@ -222,13 +218,15 @@ $('#addmat').onclick=async()=>{try{await api('/materiales',{method:'POST',body:{
 
 // ---- Empresa ----
 const CAMPOS=[['empresa','Nombre de la empresa'],['ruc','RUC'],['direccion','Dirección'],['telefono','Teléfono'],['correo','Correo'],['gerente','Gerente'],['validez','Texto de validez'],['nota','Nota (ej. NO INCLUYE IGV)'],['lema','Lema (pie de la cotización)'],['utilidad','Utilidades % por defecto']];
-function empresa(){$('#emp').innerHTML=CAMPOS.map(([k,t])=>`<label>${t}</label><input data-c="${k}" value="${esc(S.cfg[k])}">`).join('');
+function empresa(){$('#emp').innerHTML=CAMPOS.map(([k,t])=>`<label>${t}</label><input data-c="${k}" value="${esc(S.cfg[k])}">`).join('')
+  +`<label>Plantilla de cotización por defecto</label><select data-c="plantilla">${PLANT.map(([v,n])=>`<option value="${v}">Plantilla ${v} · ${n}</option>`).join('')}</select><label>Tamaño de papel por defecto</label><select data-c="papel">${Object.keys(PAPEL).map(p=>`<option>${p}</option>`).join('')}</select>`;
+  $('#emp [data-c=plantilla]').value=S.cfg.plantilla||'A';$('#emp [data-c=papel]').value=S.cfg.papel||'A4';
   $('#logoprev').innerHTML=S.cfg.logo?`<img src="${S.cfg.logo}" style="max-height:70px;margin-top:6px">`:''}
 $('#logo').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{const k=Math.min(1,400/im.width),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.cfg.logo=cv.toDataURL('image/png');empresa()};im.src=URL.createObjectURL(f)};
 $('#saveemp').onclick=async()=>{document.querySelectorAll('[data-c]').forEach(i=>S.cfg[i.dataset.c]=i.value);
-  try{await api('/config',{method:'PUT',body:S.cfg});$('#pct').value=S.cfg.utilidad||10;totales();alert('Datos guardados')}catch(e){fail(e)}};
+  try{await api('/config',{method:'PUT',body:S.cfg});$('#pct').value=S.cfg.utilidad||10;$('#sel-tpl').value=S.cfg.plantilla||'A';$('#sel-pap').value=S.cfg.papel||'A4';totales();alert('Datos guardados')}catch(e){fail(e)}};
 
 // ---- Inicio ----
 async function cargar(){S.mats=await api('/materiales');lista();mats();totales()}
-(async()=>{try{S.cfg=await api('/config');$('#fecha').value=new Date().toLocaleDateString('en-CA');$('#pct').value=S.cfg.utilidad||10;globs();empresa();await cargar()}catch(e){fail(e)}})();
+(async()=>{try{S.cfg=await api('/config');$('#fecha').value=new Date().toLocaleDateString('en-CA');$('#pct').value=S.cfg.utilidad||10;$('#sel-tpl').value=S.cfg.plantilla||'A';$('#sel-pap').value=S.cfg.papel||'A4';globs();empresa();await cargar()}catch(e){fail(e)}})();
 </script></body></html>
